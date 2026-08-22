@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkTunnel Decryptor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔓</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔓 DarkTunnel Decryptor</h1>
+            <p class="subtitle">Decrypt VPN configuration files from various apps</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="fileInput" class="drop-zone" id="dropZone">
+                                    <div class="drop-zone-content">
+                                        <span class="drop-icon">📁</span>
+                                        <p>Drag & drop your config file here</p>
+                                        <p class="drop-hint">Supports: .dark, .hc, .ehi, .npv, .ssc, .txt</p>
+                                        <input type="file" id="fileInput" name="file" accept=".dark,.hc,.ehi,.npv,.ssc,.txt" required>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="typeSelect">Decryptor Type</label>
+                                <select id="typeSelect" name="type">
+                                    <option value="auto">🔍 Auto Detect</option>
+                                    <option value="darktunnel">🌑 Dark Tunnel (.dark)</option>
+                                    <option value="httpcustom">🌐 HTTP Custom (.hc)</option>
+                                    <option value="httpinjector">💉 HTTP Injector (.ehi)</option>
+                                    <option value="npvtunnel">🔷 NPV Tunnel (.npv)</option>
+                                    <option value="ssccustom">📡 SSC Custom (.ssc)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary" id="decryptBtn">
+                                    <span class="btn-icon">🔓</span>
+                                    Decrypt
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="fileInfo" class="file-info" style="display:none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="file-details">
+                                <span class="file-icon">📄</span>
+                                <span id="fileName" class="file-name"></span>
+                                <span id="fileSize" class="file-size"></span>
+                                <span id="fileType" class="file-type badge"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultSection" class="result-section" style="display:none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>📋 Decrypted Result</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-sm btn-outline" id="copyBtn">📋 Copy</button>
+                            <button class="btn btn-sm btn-outline" id="downloadBtn">💾 Download</button>
+                            <button class="btn btn-sm btn-outline" id="clearBtn">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="result-container">
+                            <pre id="resultContent" class="json-viewer"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorSection" class="error-section" style="display:none;">
+                <div class="card card-error">
+                    <div class="card-body">
+                        <div class="error-content">
+                            <span class="error-icon">❌</span>
+                            <p id="errorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Supported formats: Dark Tunnel (.dark) • HTTP Custom (.hc) • HTTP Injector (.ehi) • NPV Tunnel (.npv) • SSC Custom (.ssc)</p>
+            <p class="footer-credit">code : @HABIBI_1ST &amp; @NullptrO</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
