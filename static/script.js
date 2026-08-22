@@ -32,13 +32,14 @@ document.addEventListener('DOMContentLoaded', function() {
     dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
         this.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            fileInput.files = e.dataTransfer.files;
-            updateFileInfo(e.dataTransfer.files[0]);
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileInfo(files[0]);
         }
     });
 
-    // File input change
+    // File input change - SUPPORT ALL FILES
     fileInput.addEventListener('change', function() {
         if (this.files.length > 0) {
             updateFileInfo(this.files[0]);
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fileName.textContent = file.name;
         fileSize.textContent = sizeStr;
         
-        // Detect type from extension - SUPPORTS .dark
+        // Detect type from extension
         const ext = file.name.split('.').pop().toLowerCase();
         const typeMap = {
             'dark': 'Dark Tunnel (.dark)',
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const detectedType = typeMap[ext] || 'Unknown';
         fileType.textContent = detectedType;
         
-        // Set badge data attribute for styling
+        // Set badge data attribute
         const typeMapData = {
             'dark': 'darktunnel',
             'hc': 'httpcustom',
@@ -78,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fileType.setAttribute('data-type', typeMapData[ext]);
         }
         
-        // Auto-select type - SUPPORTS .dark
+        // Auto-select type
         const typeMapSelect = {
             'dark': 'darktunnel',
             'hc': 'httpcustom',
@@ -88,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         if (typeMapSelect[ext]) {
             typeSelect.value = typeMapSelect[ext];
+        } else {
+            // Kalo gak dikenal, pilih auto
+            typeSelect.value = 'auto';
         }
 
         fileInfo.style.display = 'block';
@@ -102,8 +106,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Cek ukuran file (max 50MB)
+        const file = fileInput.files[0];
+        if (file.size > 50 * 1024 * 1024) {
+            showError('File too large. Maximum size is 50MB.');
+            return;
+        }
+
         const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
+        formData.append('file', file);
         formData.append('type', typeSelect.value);
 
         // Show loading
@@ -115,7 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch('/decrypt', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                // Tambahkan timeout
+                signal: AbortSignal.timeout(60000) // 60 detik timeout
             });
 
             const data = await response.json();
@@ -125,18 +138,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultContent.textContent = data.result;
                 resultSection.style.display = 'block';
                 
-                // Update file info with detected type
                 if (data.file_info) {
                     fileType.textContent = data.file_info.display_name;
                 }
 
-                // Syntax highlight
+                // Auto scroll ke result
+                resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
                 highlightJSON(resultContent);
             } else {
                 showError(data.error || 'Decryption failed.');
             }
         } catch (error) {
-            showError('Network error: ' + error.message);
+            if (error.name === 'TimeoutError') {
+                showError('Request timed out. The file might be too large or complex.');
+            } else {
+                showError('Network error: ' + error.message);
+            }
         } finally {
             decryptBtn.disabled = false;
             decryptBtn.innerHTML = '<span class="btn-icon">🔓</span> Decrypt';
@@ -177,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const a = document.createElement('a');
             a.href = url;
             
-            // Generate filename from input file
             const originalName = fileInput.files[0]?.name || 'config';
             const baseName = originalName.replace(/\.[^.]+$/, '');
             a.download = `${baseName}_decrypted.json`;
@@ -202,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showError(message) {
         errorSection.style.display = 'block';
         errorMessage.textContent = message;
+        errorSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function hideErrors() {
