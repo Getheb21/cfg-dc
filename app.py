@@ -3,6 +3,7 @@ import json
 import base64
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
+from flask_cors import CORS  # Tambahkan ini
 
 from decryptors import (
     run_darktunnel,
@@ -13,7 +14,12 @@ from decryptors import (
 )
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Enable CORS untuk semua domain
+CORS(app)
+
+# File size limit - 50MB
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-please-change')
 
 # Map file types to decryption functions
@@ -25,7 +31,7 @@ DECRYPTORS = {
     'ssccustom': run_ssccustom
 }
 
-# File extension to type mapping - SUPPORTS .dark
+# File extension to type mapping
 EXTENSION_MAP = {
     '.dark': 'darktunnel',
     '.hc': 'httpcustom',
@@ -55,20 +61,25 @@ def decrypt():
         
         # Auto-detect if not specified
         if decryptor_type == 'auto':
+            # Check by extension first
             for ext, d_type in EXTENSION_MAP.items():
                 if filename.endswith(ext):
                     decryptor_type = d_type
                     break
             else:
                 # Try to detect from content
-                file_bytes = file.read()
-                file.seek(0)
-                content_preview = file_bytes[:200].decode('utf-8', errors='ignore')
+                file_bytes = file.read(500)  # Baca 500 bytes untuk deteksi
+                file.seek(0)  # Reset pointer ke awal
                 
-                # Dark Tunnel detection - check for common patterns
+                try:
+                    content_preview = file_bytes.decode('utf-8', errors='ignore')
+                except:
+                    content_preview = ''
+                
+                # Dark Tunnel detection
                 if 'encryptedLockedConfig' in content_preview:
                     decryptor_type = 'darktunnel'
-                elif 'HTTP Custom' in content_preview or content_preview.startswith('HABIBI'):
+                elif 'HTTP Custom' in content_preview or 'HABIBI' in content_preview:
                     decryptor_type = 'httpcustom'
                 elif content_preview.startswith('NPVTSUB1') or content_preview.startswith('NPVT1'):
                     decryptor_type = 'npvtunnel'
@@ -80,14 +91,22 @@ def decrypt():
                     # Try base64 decode for Dark Tunnel
                     try:
                         import base64
-                        decoded = base64.b64decode(content_preview[:100].replace('-', '+').replace('_', '/') + '==')
+                        # Coba decode base64
+                        clean = content_preview[:100].replace('-', '+').replace('_', '/')
+                        # Tambah padding
+                        if len(clean) % 4:
+                            clean += '=' * (4 - len(clean) % 4)
+                        decoded = base64.b64decode(clean)
                         if b'encryptedLockedConfig' in decoded:
                             decryptor_type = 'darktunnel'
                     except:
                         pass
                     
                     if decryptor_type == 'auto':
-                        return jsonify({'error': 'Unknown file type. Please select the correct decryptor.', 'success': False}), 400
+                        return jsonify({
+                            'error': 'Unknown file type. Please select the correct decryptor manually.',
+                            'success': False
+                        }), 400
         
         if decryptor_type not in DECRYPTORS:
             return jsonify({'error': f'Unknown decryptor type: {decryptor_type}', 'success': False}), 400
